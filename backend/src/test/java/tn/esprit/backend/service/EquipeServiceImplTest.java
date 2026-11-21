@@ -40,7 +40,7 @@ class EquipeServiceImplTest {
 
         Equipe resultat = equipeService.addEquipe(equipe);
 
-        assertEquals("DevOps-FAUX", resultat.getNom());
+        assertEquals("DevOps", resultat.getNom());
         verify(equipeRepository).save(equipe);
     }
 
