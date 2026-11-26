@@ -2,18 +2,18 @@ pipeline {
     agent any
 
     tools {
-        // Noms definis dans Administrer Jenkins > Tools (Atelier 3)
         jdk   'JAVA_HOME'
         maven 'M2_HOME'
     }
 
     triggers {
-        // Declenche le build a chaque push recu via le webhook GitHub
         githubPush()
     }
 
     environment {
-        EMAIL_DEST = 'sarra.benothmen@esprit.tn'   // <-- a remplacer
+        EMAIL_DEST   = 'sarra.benothmen@esprit.tn'
+        DOCKER_IMAGE = 'sarrabenothmen/backend-gestion-projets'
+        DOCKER_TAG   = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -49,6 +49,32 @@ pipeline {
                 }
             }
         }
+
+        stage('Build image Docker') {
+            steps {
+                dir('backend') {
+                    sh 'docker build -t $DOCKER_IMAGE:$DOCKER_TAG -t $DOCKER_IMAGE:latest .'
+                    sh 'docker images | grep backend-gestion-projets'
+                }
+            }
+        }
+
+        stage('Push image Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                  usernameVariable: 'DOCKER_USER',
+                                                  passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                    sh 'docker push $DOCKER_IMAGE:$DOCKER_TAG'
+                    sh 'docker push $DOCKER_IMAGE:latest'
+                }
+            }
+            post {
+                always {
+                    sh 'docker logout'
+                }
+            }
+        }
     }
 
     post {
@@ -62,7 +88,7 @@ pipeline {
             )
         }
         success {
-            echo 'Build reussi : livrable genere dans backend/target/'
+            echo 'Build reussi : image Docker poussee sur Docker Hub'
         }
     }
 }
